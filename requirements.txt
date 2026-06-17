@@ -1,0 +1,11 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+requests==2.32.3
+pandas==2.2.3
+sqlalchemy==2.0.36
+psycopg2-binary==2.9.10
+python-dotenv==1.0.1
+boto3==1.35.54
+schedule==1.2.2
+pyarrow==17.0.0
+aiofiles==24.1.0
