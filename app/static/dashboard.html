@@ -293,6 +293,134 @@
     </div>
   </div>
 
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- ══ SECTION DIRECTION ══════════════════════════════════════════════ -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+
+  <div class="row g-3 mb-2 mt-2">
+    <div class="col-12">
+      <div style="border-left:3px solid #a78bfa; padding-left:12px">
+        <div style="color:#a78bfa; font-size:.75rem; text-transform:uppercase; letter-spacing:1px; font-weight:600;">
+          <i class="bi bi-briefcase-fill me-2"></i>Tableau de bord Direction — KPI stratégiques
+        </div>
+        <div style="color:#8899aa; font-size:.78rem">Fiabilité réseau · Stations fantômes · Efficacité par ville · Planification équipes</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ KPI Direction — compteurs ══ -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="kpi-card" style="border-color:rgba(167,139,250,0.25)">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="kpi-value" style="color:#a78bfa" id="kpi-fiabilite-moy">—</div>
+            <div class="kpi-label">Fiabilité moy. réseau</div>
+          </div>
+          <i class="bi bi-shield-check kpi-icon" style="color:#a78bfa"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="kpi-card" style="border-color:rgba(167,139,250,0.25)">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="kpi-value text-danger" id="kpi-fantomes">—</div>
+            <div class="kpi-label">Stations fantômes</div>
+          </div>
+          <i class="bi bi-ghost-fill kpi-icon text-danger"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="kpi-card" style="border-color:rgba(167,139,250,0.25)">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="kpi-value text-warning" id="kpi-villes-faibles">—</div>
+            <div class="kpi-label">Villes &lt; 30% dispo.</div>
+          </div>
+          <i class="bi bi-exclamation-circle-fill kpi-icon text-warning"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="kpi-card" style="border-color:rgba(167,139,250,0.25)">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="kpi-value" style="color:#a78bfa" id="kpi-heure-pic-critique">—</div>
+            <div class="kpi-label">Heure de pic critique</div>
+          </div>
+          <i class="bi bi-clock-fill kpi-icon" style="color:#a78bfa"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ Fiabilité + Stations fantômes ══ -->
+  <div class="row g-3 mb-3">
+
+    <!-- Taux de fiabilité -->
+    <div class="col-12 col-xl-6">
+      <div class="section-card h-100">
+        <div class="section-title">
+          <span class="badge-q" style="background:rgba(167,139,250,0.15);color:#a78bfa;border-color:rgba(167,139,250,0.3)">KPI 1</span>
+          Taux de fiabilité par station — pires performances
+          <small class="text-secondary ms-2" style="font-size:.72rem">% du temps en état "ok" (6h)</small>
+        </div>
+        <div id="chartReliability" style="height:320px;"></div>
+      </div>
+    </div>
+
+    <!-- Stations fantômes -->
+    <div class="col-12 col-xl-6">
+      <div class="section-card h-100">
+        <div class="section-title">
+          <span class="badge-q" style="background:rgba(167,139,250,0.15);color:#a78bfa;border-color:rgba(167,139,250,0.3)">KPI 2</span>
+          Stations fantômes — bloquées en état fixe
+          <small class="text-secondary ms-2" style="font-size:.72rem">rééquilibrage urgent requis</small>
+        </div>
+        <div class="p-3 table-scroll">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Station</th><th>Ville</th><th>État bloqué</th><th>Mesures</th><th>Depuis</th>
+              </tr>
+            </thead>
+            <tbody id="bodyGhost">
+              <tr><td colspan="5" class="text-center text-secondary">Chargement…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ Efficacité par ville + Criticité horaire ══ -->
+  <div class="row g-3 mb-3">
+
+    <!-- Efficacité par ville -->
+    <div class="col-12 col-xl-7">
+      <div class="section-card h-100">
+        <div class="section-title">
+          <span class="badge-q" style="background:rgba(167,139,250,0.15);color:#a78bfa;border-color:rgba(167,139,250,0.3)">KPI 3</span>
+          Efficacité réseau par ville — taux de disponibilité réelle
+        </div>
+        <div id="chartCityEfficiency" style="height:340px;"></div>
+      </div>
+    </div>
+
+    <!-- Criticité horaire -->
+    <div class="col-12 col-xl-5">
+      <div class="section-card h-100">
+        <div class="section-title">
+          <span class="badge-q" style="background:rgba(167,139,250,0.15);color:#a78bfa;border-color:rgba(167,139,250,0.3)">KPI 4</span>
+          Taux de criticité par heure — planification équipes
+        </div>
+        <div id="chartHourlyCrit" style="height:340px;"></div>
+      </div>
+    </div>
+  </div>
+
 </div><!-- /container -->
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -542,6 +670,140 @@ async function loadCritical() {
   } catch(e) { console.warn('Critical error', e); }
 }
 
+/* ══════════════════ KPI 1 — FIABILITÉ ══════════════════ */
+async function loadReliability() {
+  try {
+    const d = await fetchJSON('/analytics/station-reliability');
+    const items = (d.items || []).slice(0, 15).reverse();
+    if (!items.length) return;
+
+    // KPI card fiabilité moyenne
+    const avg = items.reduce((s, i) => s + Number(i.taux_fiabilite || 0), 0) / items.length;
+    document.getElementById('kpi-fiabilite-moy').textContent = avg.toFixed(1) + '%';
+
+    const colors = items.map(i => {
+      const t = Number(i.taux_fiabilite);
+      return t < 50 ? '#ff6b6b' : t < 75 ? '#ffd93d' : '#a78bfa';
+    });
+    Plotly.react('chartReliability', [{
+      type: 'bar', orientation: 'h',
+      x: items.map(i => Number(i.taux_fiabilite)),
+      y: items.map(i => i.station_name),
+      marker: { color: colors },
+      text: items.map(i => i.taux_fiabilite + '%'),
+      textposition: 'outside',
+      customdata: items.map(i => [i.city, i.nb_vides, i.nb_pleines]),
+      hovertemplate: '<b>%{y}</b> (%{customdata[0]})<br>Fiabilité: %{x}%<br>Vides: %{customdata[1]} | Pleines: %{customdata[2]}<extra></extra>',
+    }], {
+      ...PLOTLY_LAYOUT,
+      margin: { t: 10, b: 40, l: 170, r: 60 },
+      xaxis: { ...PLOTLY_LAYOUT.xaxis, title: 'Taux de fiabilité (%)', range: [0, 115] },
+      yaxis: { ...PLOTLY_LAYOUT.yaxis, tickfont: { size: 9 } },
+    }, PLOTLY_CONFIG);
+  } catch(e) { console.warn('Reliability error', e); }
+}
+
+/* ══════════════════ KPI 2 — STATIONS FANTÔMES ══════════════════ */
+async function loadGhostStations() {
+  try {
+    const d = await fetchJSON('/analytics/ghost-stations');
+    const items = d.items || [];
+    document.getElementById('kpi-fantomes').textContent = items.length;
+    const tbody = document.getElementById('bodyGhost');
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center text-success"><i class="bi bi-check-circle me-2"></i>Aucune station fantôme ✓</td></tr>';
+      return;
+    }
+    tbody.innerHTML = items.map(i => {
+      const badge = i.statut_bloque === 'empty'
+        ? '<span class="badge badge-critical rounded-pill">🔴 VIDE</span>'
+        : '<span class="badge badge-empty rounded-pill">🟠 PLEINE</span>';
+      const since = i.bloquee_depuis ? new Date(i.bloquee_depuis).toLocaleTimeString('fr', {hour:'2-digit',minute:'2-digit'}) : '—';
+      return `<tr>
+        <td><strong>${i.station_name}</strong></td>
+        <td>${i.city || '—'}</td>
+        <td>${badge}</td>
+        <td>${i.nb_mesures} mesures</td>
+        <td class="text-secondary">depuis ${since}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) { console.warn('Ghost stations error', e); }
+}
+
+/* ══════════════════ KPI 3 — EFFICACITÉ PAR VILLE ══════════════════ */
+async function loadCityEfficiency() {
+  try {
+    const d = await fetchJSON('/analytics/city-efficiency');
+    const items = (d.items || []).slice(0, 20);
+    if (!items.length) return;
+
+    const faiblesTot = items.filter(i => Number(i.taux_disponibilite) < 30).length;
+    document.getElementById('kpi-villes-faibles').textContent = faiblesTot;
+
+    const colors = items.map(i => {
+      const t = Number(i.taux_disponibilite);
+      return t < 20 ? '#ff6b6b' : t < 40 ? '#ffd93d' : '#00d4aa';
+    });
+    Plotly.react('chartCityEfficiency', [{
+      type: 'bar',
+      x: items.map(i => i.city),
+      y: items.map(i => Number(i.taux_disponibilite)),
+      marker: { color: colors },
+      text: items.map(i => i.taux_disponibilite + '%'),
+      textposition: 'outside',
+      customdata: items.map(i => [i.nb_stations, i.total_velos, i.total_capacite, i.pct_critique]),
+      hovertemplate: '<b>%{x}</b><br>Dispo: %{y}%<br>Stations: %{customdata[0]}<br>Vélos: %{customdata[1]}/%{customdata[2]}<br>Critiques: %{customdata[3]}%<extra></extra>',
+    }], {
+      ...PLOTLY_LAYOUT,
+      margin: { t: 10, b: 80, l: 45, r: 20 },
+      xaxis: { ...PLOTLY_LAYOUT.xaxis, tickangle: -40, tickfont: { size: 9 } },
+      yaxis: { ...PLOTLY_LAYOUT.yaxis, title: 'Taux disponibilité (%)', range: [0, 110] },
+      shapes: [{ type: 'line', x0: -0.5, x1: items.length - 0.5, y0: 30, y1: 30,
+        line: { color: '#ff6b6b', width: 1.5, dash: 'dot' } }],
+      annotations: [{ x: 0, y: 32, text: 'Seuil min. 30%', showarrow: false,
+        font: { color: '#ff6b6b', size: 10 }, xref: 'paper', yref: 'y' }],
+    }, PLOTLY_CONFIG);
+  } catch(e) { console.warn('City efficiency error', e); }
+}
+
+/* ══════════════════ KPI 4 — CRITICITÉ HORAIRE ══════════════════ */
+async function loadHourlyCriticality() {
+  try {
+    const d = await fetchJSON('/analytics/hourly-criticality');
+    const items = d.items || [];
+    if (!items.length) return;
+
+    const peak = items.reduce((max, i) => Number(i.pct_critique) > Number(max.pct_critique) ? i : max, items[0]);
+    document.getElementById('kpi-heure-pic-critique').textContent = Number(peak.heure).toFixed(0) + 'h';
+
+    Plotly.react('chartHourlyCrit', [
+      {
+        type: 'scatter', mode: 'lines+markers', name: '% stations critiques',
+        x: items.map(i => Number(i.heure) + 'h'),
+        y: items.map(i => Number(i.pct_critique)),
+        fill: 'tozeroy', fillcolor: 'rgba(255,107,107,0.12)',
+        line: { color: '#ff6b6b', width: 2.5 },
+        marker: { size: 6, color: '#ff6b6b' },
+        hovertemplate: '%{x} → %{y}% stations critiques<extra></extra>',
+      },
+      {
+        type: 'bar', name: 'Stations vides',
+        x: items.map(i => Number(i.heure) + 'h'),
+        y: items.map(i => Number(i.nb_vides)),
+        marker: { color: 'rgba(255,217,61,0.3)' }, yaxis: 'y2',
+        hovertemplate: '%{x} → %{y} vides<extra></extra>',
+      }
+    ], {
+      ...PLOTLY_LAYOUT,
+      margin: { t: 10, b: 45, l: 45, r: 45 },
+      legend: { orientation: 'h', y: -0.25, font: { size: 10 } },
+      yaxis:  { ...PLOTLY_LAYOUT.yaxis, title: '% critique' },
+      yaxis2: { ...PLOTLY_LAYOUT.yaxis, title: 'Nb vides', overlaying: 'y', side: 'right', showgrid: false },
+      xaxis:  { ...PLOTLY_LAYOUT.xaxis, title: 'Heure' },
+    }, PLOTLY_CONFIG);
+  } catch(e) { console.warn('Hourly criticality error', e); }
+}
+
 /* ══════════════════ ORCHESTRATION ══════════════════ */
 async function loadAll() {
   document.getElementById('lastUpdate').textContent = 'Actualisation…';
@@ -553,6 +815,10 @@ async function loadAll() {
     loadInsufficient(),
     loadRebalancing(),
     loadCritical(),
+    loadReliability(),
+    loadGhostStations(),
+    loadCityEfficiency(),
+    loadHourlyCriticality(),
   ]);
   document.getElementById('lastUpdate').textContent =
     'Mis à jour : ' + new Date().toLocaleTimeString('fr');

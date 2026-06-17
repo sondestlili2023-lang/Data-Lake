@@ -13,10 +13,14 @@ from fastapi.staticfiles import StaticFiles
 from app.analytics import (
     get_critical_stations,
     get_geographic_balance,
+    get_hourly_criticality,
     get_hourly_peak,
+    get_city_efficiency,
+    get_ghost_stations,
     get_insufficient_supply_zones,
     get_network_overview,
     get_rebalancing_stations,
+    get_station_reliability,
     get_top_stations,
 )
 from app.ingest import run_ingestion_once
@@ -33,7 +37,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname
 logger = logging.getLogger(__name__)
 
 
-INGEST_INTERVAL  = 300   # 5 min — respecte le rate limit CityBikes
+INGEST_INTERVAL  = 900   # 15 min — respecte le rate limit CityBikes
 ALERT_INTERVAL   = 300
 HOURLY_INTERVAL  = 3600
 
@@ -141,6 +145,28 @@ def rebalancing(limit: int = Query(default=20, ge=1, le=100)):
 @app.get("/analytics/network-overview")
 def network_overview():
     return {"items": get_network_overview()}
+
+
+# ── KPI Direction ─────────────────────────────────────────────────────────────
+
+@app.get("/analytics/station-reliability")
+def station_reliability():
+    return {"items": get_station_reliability()}
+
+
+@app.get("/analytics/ghost-stations")
+def ghost_stations():
+    return {"items": get_ghost_stations()}
+
+
+@app.get("/analytics/city-efficiency")
+def city_efficiency():
+    return {"items": get_city_efficiency()}
+
+
+@app.get("/analytics/hourly-criticality")
+def hourly_criticality():
+    return {"items": get_hourly_criticality()}
 
 
 # ── Telegram ──────────────────────────────────────────────────────────────────
