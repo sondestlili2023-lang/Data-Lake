@@ -90,12 +90,29 @@ def _cmd_start(chat_id: str) -> None:
     )
 
 
+_LAST = "(SELECT MAX(ingested_at) FROM station_snapshots)"
+
+
 def _cmd_kpi(chat_id: str) -> None:
     try:
         with engine.connect() as conn:
-            rows = conn.execute(text("SELECT * FROM v_network_overview")).fetchall()
+            rows = conn.execute(text(f"""
+                SELECT n.network_name, n.city,
+                       COUNT(DISTINCT ss.station_id)               AS nb_stations,
+                       SUM(ss.bikes_available)                     AS total_bikes,
+                       SUM(ss.total_capacity)                      AS total_capacity,
+                       ROUND(AVG(ss.utilization_rate)::NUMERIC, 1) AS avg_utilization,
+                       SUM(CASE WHEN ss.is_critical THEN 1 ELSE 0 END) AS nb_critiques,
+                       MAX(ss.ingested_at)                         AS last_update
+                FROM station_snapshots ss
+                JOIN networks n ON n.network_id = ss.network_id
+                WHERE ss.ingested_at >= {_LAST} - INTERVAL '30 minutes'
+                GROUP BY n.network_id, n.network_name, n.city
+                ORDER BY n.city
+                LIMIT 20
+            """)).fetchall()
         if not rows:
-            send_message("Pas encore de données. L'ingestion démarre dans quelques instants.", chat_id)
+            send_message("Aucune donnée disponible. Vérifiez que l'ingestion tourne.", chat_id)
             return
         lines = ["<b>📊 Vue d'ensemble des réseaux</b>\n"]
         for r in rows:
@@ -115,12 +132,12 @@ def _cmd_kpi(chat_id: str) -> None:
 def _cmd_critique(chat_id: str) -> None:
     try:
         with engine.connect() as conn:
-            rows = conn.execute(text("""
+            rows = conn.execute(text(f"""
                 SELECT DISTINCT ON (station_id)
                     station_name, city, bikes_available, free_slots, status, ingested_at
                 FROM analytics_station_snapshot
                 WHERE is_critical = TRUE
-                  AND ingested_at >= NOW() - INTERVAL '5 minutes'
+                  AND ingested_at >= {_LAST} - INTERVAL '30 minutes'
                 ORDER BY station_id, ingested_at DESC
                 LIMIT 20
             """)).fetchall()
@@ -141,18 +158,18 @@ def _cmd_critique(chat_id: str) -> None:
 def _cmd_taux(chat_id: str) -> None:
     try:
         with engine.connect() as conn:
-            rows = conn.execute(text("""
+            rows = conn.execute(text(f"""
                 SELECT station_name, city,
                        ROUND(AVG(utilization_rate)::NUMERIC, 1) AS taux
                 FROM analytics_station_snapshot
-                WHERE ingested_at >= NOW() - INTERVAL '1 hour'
+                WHERE ingested_at >= {_LAST} - INTERVAL '30 minutes'
                   AND total_capacity > 0
                 GROUP BY station_id, station_name, city
                 ORDER BY taux DESC
                 LIMIT 15
             """)).fetchall()
         if not rows:
-            send_message("Pas encore assez de données (revenir dans 1h).", chat_id)
+            send_message("Aucune donnée disponible pour le moment.", chat_id)
             return
         lines = ["<b>📈 Top 15 — Taux d'utilisation (1h)</b>\n<pre>"]
         for i, r in enumerate(rows, 1):
@@ -195,7 +212,7 @@ def _cmd_pics(chat_id: str) -> None:
 def _cmd_reequilibrage(chat_id: str) -> None:
     try:
         with engine.connect() as conn:
-            rows = conn.execute(text("""
+            rows = conn.execute(text(f"""
                 SELECT station_name, city,
                        ROUND(
                            COUNT(*) FILTER (WHERE is_critical)::NUMERIC
@@ -205,7 +222,7 @@ def _cmd_reequilibrage(chat_id: str) -> None:
                        COUNT(*) FILTER (WHERE status = 'empty')  AS nb_vides,
                        COUNT(*) FILTER (WHERE status = 'full')   AS nb_pleines
                 FROM analytics_station_snapshot
-                WHERE ingested_at >= NOW() - INTERVAL '1 hour'
+                WHERE ingested_at >= {_LAST} - INTERVAL '30 minutes'
                 GROUP BY station_id, station_name, city
                 HAVING COUNT(*) FILTER (WHERE is_critical) > 0
                 ORDER BY pct_critique DESC
