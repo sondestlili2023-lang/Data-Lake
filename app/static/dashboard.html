@@ -3,208 +3,117 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vélib — Data Lakehouse Dashboard</title>
-
+  <title>Vélib Paris — Tableau de bord exécutif</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
-
   <style>
-    :root {
-      --accent: #00d4aa;
-      --accent2: #ff6b6b;
-      --accent3: #ffd93d;
-      --bg-card: #1a1d2e;
-      --bg-dark: #0f1117;
-    }
-    body { background: var(--bg-dark); font-family: 'Segoe UI', sans-serif; }
-
-    /* ── Header ── */
+    :root { --accent:#00d4aa; --warn:#ffd93d; --crit:#ff6b6b; --card:#1a1d2e; --bg:#0f1117; }
+    body { background:var(--bg); font-family:'Segoe UI',sans-serif; }
     .dashboard-header {
-      background: linear-gradient(135deg, #0f1117 0%, #1a1d2e 50%, #0d2137 100%);
-      border-bottom: 1px solid rgba(0, 212, 170, 0.3);
-      padding: 1.2rem 2rem;
+      background:linear-gradient(135deg,#0f1117 0%,#1a1d2e 50%,#0d2137 100%);
+      border-bottom:1px solid rgba(0,212,170,.3); padding:1.2rem 2rem;
     }
-    .dashboard-header h1 { color: var(--accent); font-weight: 700; font-size: 1.6rem; margin: 0; }
-    .dashboard-header .subtitle { color: #8899aa; font-size: 0.85rem; margin: 0; }
-
-    .refresh-badge {
-      background: rgba(0,212,170,0.1);
-      border: 1px solid rgba(0,212,170,0.4);
-      color: var(--accent);
-      border-radius: 20px;
-      padding: 4px 14px;
-      font-size: 0.8rem;
-    }
-    .live-dot {
-      display: inline-block; width: 8px; height: 8px;
-      background: var(--accent); border-radius: 50%;
-      animation: pulse 1.5s infinite;
-      margin-right: 6px;
-    }
-    @keyframes pulse {
-      0%,100% { opacity:1; transform: scale(1); }
-      50%      { opacity:0.4; transform: scale(1.4); }
-    }
-
-    /* ── KPI Cards ── */
-    .kpi-card {
-      background: var(--bg-card);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 12px;
-      padding: 1.2rem 1.4rem;
-      transition: transform .2s;
-    }
-    .kpi-card:hover { transform: translateY(-2px); }
-    .kpi-value { font-size: 2rem; font-weight: 700; line-height: 1; }
-    .kpi-label { color: #8899aa; font-size: 0.78rem; margin-top: 4px; text-transform: uppercase; letter-spacing: .5px; }
-    .kpi-icon  { font-size: 1.8rem; opacity: .7; }
-
-    /* ── Section cards ── */
-    .section-card {
-      background: var(--bg-card);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 14px;
-      overflow: hidden;
-    }
-    .section-title {
-      font-size: 0.9rem; font-weight: 600; text-transform: uppercase;
-      letter-spacing: .6px; color: #ccd; padding: 1rem 1.4rem 0;
-    }
-    .section-title .badge-q {
-      background: rgba(0,212,170,0.15); color: var(--accent);
-      border: 1px solid rgba(0,212,170,0.3);
-      font-size: 0.7rem; padding: 2px 8px; border-radius: 10px;
-      margin-right: 6px;
-    }
-
-    /* ── Table ── */
-    .table { font-size: 0.82rem; }
-    .table th { color: #8899aa; font-weight: 500; border-color: rgba(255,255,255,0.06); }
-    .table td { border-color: rgba(255,255,255,0.04); vertical-align: middle; }
-    .badge-critical { background: rgba(255,107,107,0.2); color: var(--accent2); border: 1px solid rgba(255,107,107,0.4); }
-    .badge-ok       { background: rgba(0,212,170,0.15); color: var(--accent);  border: 1px solid rgba(0,212,170,0.3); }
-    .badge-empty    { background: rgba(255,217,61,0.15); color: var(--accent3); border: 1px solid rgba(255,217,61,0.3); }
-
-    /* ── Map ── */
-    #map { height: 420px; border-radius: 0 0 14px 14px; }
-    .leaflet-container { background: #0d1117; }
-
-    /* ── Spinner ── */
-    .spinner-area { min-height: 200px; display:flex; align-items:center; justify-content:center; }
-
-    /* ── Progress bar utilization ── */
-    .util-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); }
-    .util-fill { height: 100%; border-radius: 3px; transition: width .4s; }
-
-    /* ── Scrollable table ── */
-    .table-scroll { max-height: 340px; overflow-y: auto; }
-    .table-scroll::-webkit-scrollbar { width: 4px; }
-    .table-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+    .dashboard-header h1 { color:var(--accent); font-weight:700; font-size:1.6rem; margin:0; }
+    .dashboard-header .subtitle { color:#8899aa; font-size:.85rem; margin:0; }
+    .kpi-card { background:var(--card); border:1px solid rgba(255,255,255,.07); border-radius:12px; padding:1.2rem 1.4rem; }
+    .kpi-value { font-size:1.9rem; font-weight:700; line-height:1; }
+    .kpi-label { color:#8899aa; font-size:.75rem; margin-top:4px; text-transform:uppercase; letter-spacing:.5px; }
+    .section-card { background:var(--card); border:1px solid rgba(255,255,255,.07); border-radius:14px; overflow:hidden; }
+    .section-title { font-size:.9rem; font-weight:600; text-transform:uppercase; letter-spacing:.6px; color:#ccd; padding:1rem 1.4rem 0; }
+    .table { font-size:.82rem; }
+    .table th { color:#8899aa; border-color:rgba(255,255,255,.06); }
+    .table td { border-color:rgba(255,255,255,.04); vertical-align:middle; }
+    #map { height:440px; }
+    .leaflet-container { background:#0d1117; }
+    .badge-ok { background:rgba(0,212,170,.15); color:var(--accent); border:1px solid rgba(0,212,170,.3); }
+    .badge-warn { background:rgba(255,217,61,.15); color:var(--warn); border:1px solid rgba(255,217,61,.3); }
+    .badge-crit { background:rgba(255,107,107,.2); color:var(--crit); border:1px solid rgba(255,107,107,.4); }
+    .table-scroll { max-height:360px; overflow-y:auto; }
+    .refresh-badge { background:rgba(0,212,170,.1); border:1px solid rgba(0,212,170,.4); color:var(--accent); border-radius:20px; padding:4px 14px; font-size:.8rem; }
+    .live-dot { display:inline-block; width:8px; height:8px; background:var(--accent); border-radius:50%; animation:pulse 1.5s infinite; margin-right:6px; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .score-good { color:var(--accent); }
+    .score-warn { color:var(--warn); }
+    .score-bad { color:var(--crit); }
   </style>
 </head>
 <body>
 
-<!-- ══════════════════ HEADER ══════════════════ -->
 <div class="dashboard-header d-flex align-items-center justify-content-between flex-wrap gap-2">
   <div>
-    <h1><i class="bi bi-bicycle me-2"></i>Vélib · Data Lakehouse Dashboard</h1>
-    <p class="subtitle">Mobilité urbaine — stations en temps réel · France</p>
+    <h1><i class="bi bi-bicycle me-2"></i>Vélib' Métropole — Paris</h1>
+    <p class="subtitle">Tableau de bord exécutif · disponibilité en temps réel</p>
   </div>
   <div class="d-flex align-items-center gap-3">
-    <span class="refresh-badge">
-      <span class="live-dot"></span>Actualisation : <span id="countdown">60</span>s
-    </span>
+    <a href="/alerts" class="btn btn-sm btn-outline-secondary"><i class="bi bi-whatsapp me-1"></i>Alertes WhatsApp</a>
+    <span class="refresh-badge"><span class="live-dot"></span>Actualisation : <span id="countdown">60</span>s</span>
     <span class="text-secondary" style="font-size:.8rem" id="lastUpdate">—</span>
-    <button class="btn btn-sm btn-outline-secondary" onclick="loadAll()">
-      <i class="bi bi-arrow-clockwise"></i>
-    </button>
+    <button class="btn btn-sm btn-outline-secondary" onclick="loadAll()"><i class="bi bi-arrow-clockwise"></i></button>
   </div>
 </div>
 
 <div class="container-fluid p-3 p-md-4">
 
-  <!-- ══ KPI ROW ══ -->
-  <div class="row g-3 mb-4" id="kpiRow">
-    <div class="col-6 col-md-3">
+  <!-- Bandeau exécutif -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg">
       <div class="kpi-card">
-        <div class="d-flex justify-content-between align-items-start">
-          <div>
-            <div class="kpi-value text-info" id="kpi-stations">—</div>
-            <div class="kpi-label">Stations surveillées</div>
-          </div>
-          <i class="bi bi-geo-alt-fill kpi-icon text-info"></i>
-        </div>
+        <div class="kpi-value" id="kpi-score">—</div>
+        <div class="kpi-label">Score de service</div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-lg">
       <div class="kpi-card">
-        <div class="d-flex justify-content-between align-items-start">
-          <div>
-            <div class="kpi-value text-success" id="kpi-bikes">—</div>
-            <div class="kpi-label">Vélos disponibles</div>
-          </div>
-          <i class="bi bi-bicycle kpi-icon text-success"></i>
-        </div>
+        <div class="kpi-value text-success" id="kpi-bikes">—</div>
+        <div class="kpi-label">Vélos disponibles</div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-lg">
       <div class="kpi-card">
-        <div class="d-flex justify-content-between align-items-start">
-          <div>
-            <div class="kpi-value text-danger" id="kpi-critical">—</div>
-            <div class="kpi-label">Stations critiques</div>
-          </div>
-          <i class="bi bi-exclamation-triangle-fill kpi-icon text-danger"></i>
-        </div>
+        <div class="kpi-value text-danger" id="kpi-treat">—</div>
+        <div class="kpi-label">Stations à traiter</div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-lg">
       <div class="kpi-card">
-        <div class="d-flex justify-content-between align-items-start">
-          <div>
-            <div class="kpi-value text-warning" id="kpi-utilization">—</div>
-            <div class="kpi-label">Taux d'utilisation moy.</div>
-          </div>
-          <i class="bi bi-speedometer2 kpi-icon text-warning"></i>
-        </div>
+        <div class="kpi-value text-info" id="kpi-ebike">—</div>
+        <div class="kpi-label">Part VAE (flotte dispo.)</div>
+      </div>
+    </div>
+    <div class="col-12 col-lg">
+      <div class="kpi-card">
+        <div class="kpi-value text-secondary" style="font-size:1.2rem" id="kpi-sync">—</div>
+        <div class="kpi-label">Dernière mise à jour</div>
       </div>
     </div>
   </div>
 
-  <!-- ══ ROW 1 : Top stations + Pics horaires ══ -->
+  <!-- Jauges -->
   <div class="row g-3 mb-3">
-
-    <!-- Q1 — Top stations utilisation -->
-    <div class="col-12 col-xl-7">
+    <div class="col-12 col-md-6">
       <div class="section-card h-100">
-        <div class="section-title">
-          <span class="badge-q">Q1</span>Stations au plus fort taux d'utilisation
-        </div>
-        <div id="chartTopStations" style="height:320px;"></div>
+        <div class="section-title">Flotte disponible — mécanique · VAE · places libres</div>
+        <div id="chartFleet" style="height:300px;"></div>
       </div>
     </div>
-
-    <!-- Q3 — Pics horaires -->
-    <div class="col-12 col-xl-5">
+    <div class="col-12 col-md-6">
       <div class="section-card h-100">
-        <div class="section-title">
-          <span class="badge-q">Q3</span>Pics d'utilisation journaliers (7 jours)
-        </div>
-        <div id="chartHourly" style="height:320px;"></div>
+        <div class="section-title">État du réseau — OK · vide · pleine · hors service</div>
+        <div id="chartNetwork" style="height:300px;"></div>
       </div>
     </div>
   </div>
 
-  <!-- ══ ROW 2 : Carte géographique ══ -->
+  <!-- Carte Paris -->
   <div class="row g-3 mb-3">
     <div class="col-12">
       <div class="section-card">
-        <div class="section-title d-flex justify-content-between align-items-center flex-wrap gap-2 pb-2">
-          <span><span class="badge-q">Q4</span>Déséquilibres géographiques de disponibilité</span>
-          <div class="d-flex gap-2 px-3 flex-wrap" style="font-size:.75rem">
-            <span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#00d4aa;margin-right:4px"></span>Normal</span>
-            <span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#ffd93d;margin-right:4px"></span>Faible (&lt;3 vélos)</span>
+        <div class="section-title d-flex justify-content-between flex-wrap gap-2 pb-2">
+          <span>Carte Paris — stations à surveiller</span>
+          <div class="d-flex gap-3 px-3" style="font-size:.75rem">
+            <span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#00d4aa;margin-right:4px"></span>OK</span>
+            <span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#ffd93d;margin-right:4px"></span>Faible</span>
             <span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#ff6b6b;margin-right:4px"></span>Critique</span>
           </div>
         </div>
@@ -213,352 +122,204 @@
     </div>
   </div>
 
-  <!-- ══ ROW 3 : Stations insuffisantes + Rééquilibrage ══ -->
+  <!-- Actions prioritaires -->
   <div class="row g-3 mb-3">
-
-    <!-- Q2 — Zones insuffisantes -->
-    <div class="col-12 col-xl-6">
+    <div class="col-12 col-xl-7">
       <div class="section-card h-100">
-        <div class="section-title">
-          <span class="badge-q">Q2</span>Zones où l'offre est insuffisante (&lt; 3 vélos)
-        </div>
+        <div class="section-title">Actions prioritaires</div>
         <div class="p-3 table-scroll">
-          <table class="table table-hover mb-0" id="tableInsufficient">
-            <thead>
-              <tr>
-                <th>Ville</th>
-                <th>Stations</th>
-                <th>Vélos moy.</th>
-                <th>Utilisation</th>
-                <th>Critiques</th>
-              </tr>
-            </thead>
-            <tbody id="bodyInsufficient">
-              <tr><td colspan="5" class="text-center text-secondary">Chargement…</td></tr>
-            </tbody>
+          <table class="table table-hover mb-0">
+            <thead><tr><th>Station</th><th>Problème</th><th>Vélos</th><th>VAE</th><th>Action</th></tr></thead>
+            <tbody id="bodyPriority"><tr><td colspan="5" class="text-center text-secondary">Chargement…</td></tr></tbody>
           </table>
         </div>
       </div>
     </div>
-
-    <!-- Q5 — Stations à rééquilibrer -->
-    <div class="col-12 col-xl-6">
+    <div class="col-12 col-xl-5">
       <div class="section-card h-100">
-        <div class="section-title">
-          <span class="badge-q">Q5</span>Stations critiques nécessitant un rééquilibrage
-        </div>
-        <div class="p-3 table-scroll">
-          <table class="table table-hover mb-0">
-            <thead>
-              <tr>
-                <th>Station</th>
-                <th>Ville</th>
-                <th>Vélos moy.</th>
-                <th>% critique</th>
-                <th>Vides</th>
-                <th>Pleines</th>
-              </tr>
-            </thead>
-            <tbody id="bodyRebalancing">
-              <tr><td colspan="6" class="text-center text-secondary">Chargement…</td></tr>
-            </tbody>
-          </table>
-        </div>
+        <div class="section-title">Heures de pointe — demande vélo (7 jours)</div>
+        <div id="chartHourly" style="height:340px;"></div>
       </div>
     </div>
   </div>
 
-  <!-- ══ ROW 4 : Alertes critiques en direct ══ -->
+  <!-- Alertes live -->
   <div class="row g-3 mb-3">
     <div class="col-12">
       <div class="section-card">
-        <div class="section-title d-flex justify-content-between align-items-center pb-1">
-          <span><i class="bi bi-bell-fill text-danger me-2"></i>Alertes — Stations critiques en ce moment</span>
+        <div class="section-title d-flex justify-content-between pb-1">
+          <span><i class="bi bi-bell-fill text-danger me-2"></i>Alertes en direct</span>
           <span class="badge bg-danger" id="criticalCount">0</span>
         </div>
         <div class="p-3 table-scroll">
           <table class="table table-hover mb-0">
-            <thead>
-              <tr>
-                <th>Station</th><th>Ville</th><th>Réseau</th>
-                <th>Vélos</th><th>Places libres</th><th>Statut</th><th>Heure</th>
-              </tr>
-            </thead>
-            <tbody id="bodyCritical">
-              <tr><td colspan="7" class="text-center text-secondary">Chargement…</td></tr>
-            </tbody>
+            <thead><tr><th>Station</th><th>Ville</th><th>Vélos</th><th>Places</th><th>Statut</th><th>Heure</th></tr></thead>
+            <tbody id="bodyCritical"><tr><td colspan="6" class="text-center text-secondary">Chargement…</td></tr></tbody>
           </table>
         </div>
       </div>
     </div>
   </div>
-
-</div><!-- /container -->
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
-
 <script>
-/* ══════════════════ CONFIG ══════════════════ */
-const API = '';          // même origine
+const API = '';
 const REFRESH_S = 60;
-
 const PLOTLY_LAYOUT = {
-  paper_bgcolor: 'transparent',
-  plot_bgcolor:  'transparent',
-  font: { color: '#ccd', size: 11 },
-  margin: { t: 20, b: 50, l: 50, r: 20 },
-  xaxis: { gridcolor: 'rgba(255,255,255,0.05)', zerolinecolor: 'rgba(255,255,255,0.05)' },
-  yaxis: { gridcolor: 'rgba(255,255,255,0.05)', zerolinecolor: 'rgba(255,255,255,0.05)' },
+  paper_bgcolor:'transparent', plot_bgcolor:'transparent',
+  font:{color:'#ccd',size:11}, margin:{t:10,b:10,l:10,r:10},
 };
-const PLOTLY_CONFIG = { displayModeBar: false, responsive: true };
+const PLOTLY_CONFIG = { displayModeBar:false, responsive:true };
 
-/* ══════════════════ MAP ══════════════════ */
-const map = L.map('map', { zoomControl: true }).setView([46.8, 2.3], 5);
+const map = L.map('map').setView([48.8566, 2.3522], 12);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-  attribution: '© OpenStreetMap © CartoDB', subdomains: 'abcd', maxZoom: 19
+  attribution:'© OSM © CartoDB', subdomains:'abcd', maxZoom:19
 }).addTo(map);
 let markersLayer = L.layerGroup().addTo(map);
 
-function colorForStation(avgBikes, isCritical) {
-  if (isCritical || avgBikes < 1) return '#ff6b6b';
-  if (avgBikes < 3)               return '#ffd93d';
-  return '#00d4aa';
-}
-
-/* ══════════════════ FETCH HELPERS ══════════════════ */
 async function fetchJSON(url) {
   const r = await fetch(API + url);
   if (!r.ok) throw new Error(r.statusText);
   return r.json();
 }
 
-/* ══════════════════ KPI CARDS ══════════════════ */
-async function loadKPIs() {
-  try {
-    const ov = await fetchJSON('/analytics/network-overview');
-    const items = ov.items || [];
-    let totalStations = 0, totalBikes = 0, totalCritical = 0, utilSum = 0, utilCount = 0;
-    items.forEach(n => {
-      totalStations += Number(n.total_stations || 0);
-      totalBikes    += Number(n.total_bikes_available || 0);
-      totalCritical += Number(n.critical_stations || 0);
-      if (n.avg_utilization) { utilSum += Number(n.avg_utilization); utilCount++; }
-    });
-    document.getElementById('kpi-stations').textContent    = totalStations.toLocaleString('fr');
-    document.getElementById('kpi-bikes').textContent       = totalBikes.toLocaleString('fr');
-    document.getElementById('kpi-critical').textContent    = totalCritical.toLocaleString('fr');
-    document.getElementById('kpi-utilization').textContent = utilCount ? (utilSum/utilCount).toFixed(1)+'%' : '—';
-  } catch(e) { console.warn('KPI error', e); }
+function scoreClass(pct) {
+  if (pct >= 90) return 'score-good';
+  if (pct >= 75) return 'score-warn';
+  return 'score-bad';
 }
 
-/* ══════════════════ Q1 — TOP STATIONS ══════════════════ */
-async function loadTopStations() {
-  try {
-    const d = await fetchJSON('/analytics/top-stations?limit=15');
-    const items = (d.items || []).reverse();
-    const colors = items.map(i => {
-      const u = Number(i.avg_utilization);
-      return u >= 80 ? '#ff6b6b' : u >= 50 ? '#ffd93d' : '#00d4aa';
-    });
-    Plotly.react('chartTopStations', [{
-      type: 'bar', orientation: 'h',
-      x: items.map(i => Number(i.avg_utilization)),
-      y: items.map(i => i.station_name),
-      marker: { color: colors },
-      text: items.map(i => i.avg_utilization + '%'),
-      textposition: 'outside',
-      hovertemplate: '<b>%{y}</b><br>Utilisation: %{x}%<extra></extra>',
-    }], {
-      ...PLOTLY_LAYOUT,
-      margin: { t: 10, b: 40, l: 160, r: 60 },
-      xaxis: { ...PLOTLY_LAYOUT.xaxis, title: 'Taux utilisation (%)', range: [0, 110] },
-      yaxis: { ...PLOTLY_LAYOUT.yaxis, tickfont: { size: 10 } },
-    }, PLOTLY_CONFIG);
-  } catch(e) { console.warn('Top stations error', e); }
+function statusLabel(s) {
+  if (s === 'empty') return { text:'Vide', cls:'badge-warn' };
+  if (s === 'full') return { text:'Pleine', cls:'badge-ok' };
+  if (s === 'closed') return { text:'Hors service', cls:'badge-crit' };
+  return { text:s, cls:'badge-ok' };
 }
 
-/* ══════════════════ Q3 — PICS HORAIRES ══════════════════ */
-async function loadHourlyPeak() {
-  try {
-    const d = await fetchJSON('/analytics/hourly-peak');
-    const items = d.items || [];
-    Plotly.react('chartHourly', [
-      {
-        type: 'scatter', mode: 'lines+markers', name: 'Utilisation (%)',
-        x: items.map(i => i.hour_of_day + 'h'),
-        y: items.map(i => i.avg_utilization),
-        line: { color: '#00d4aa', width: 2.5 },
-        marker: { size: 6, color: '#00d4aa' },
-        fill: 'tozeroy', fillcolor: 'rgba(0,212,170,0.08)',
-        yaxis: 'y',
-        hovertemplate: '%{x} → %{y}%<extra>Utilisation</extra>',
-      },
-      {
-        type: 'bar', name: 'Vélos dispo.',
-        x: items.map(i => i.hour_of_day + 'h'),
-        y: items.map(i => i.avg_bikes),
-        marker: { color: 'rgba(255,217,61,0.35)' },
-        yaxis: 'y2',
-        hovertemplate: '%{x} → %{y:.1f} vélos<extra>Vélos dispo.</extra>',
-      }
-    ], {
-      ...PLOTLY_LAYOUT,
-      margin: { t: 10, b: 45, l: 45, r: 45 },
-      legend: { orientation:'h', y:-0.25, font:{size:10} },
-      yaxis:  { ...PLOTLY_LAYOUT.yaxis, title: '% utilisation' },
-      yaxis2: { ...PLOTLY_LAYOUT.yaxis, title: 'Vélos', overlaying:'y', side:'right', showgrid:false },
-      xaxis:  { ...PLOTLY_LAYOUT.xaxis, title: 'Heure de la journée' },
-    }, PLOTLY_CONFIG);
-  } catch(e) { console.warn('Hourly error', e); }
+function mapColor(status) {
+  if (status === 'empty' || status === 'full') return '#ff6b6b';
+  if (status === 'closed') return '#888';
+  return '#00d4aa';
 }
 
-/* ══════════════════ Q4 — CARTE GÉOGRAPHIQUE ══════════════════ */
-async function loadMap() {
-  try {
-    const [geo, crit] = await Promise.all([
-      fetchJSON('/analytics/geographic-balance'),
-      fetchJSON('/analytics/critical-stations'),
-    ]);
+async function loadExecutive() {
+  const [summary, fleet] = await Promise.all([
+    fetchJSON('/analytics/executive-summary'),
+    fetchJSON('/analytics/fleet-mix'),
+  ]);
+  const score = Number(summary.service_score_pct || 0);
+  const el = document.getElementById('kpi-score');
+  el.textContent = score.toFixed(1) + '%';
+  el.className = 'kpi-value ' + scoreClass(score);
+  document.getElementById('kpi-bikes').textContent = Number(summary.total_bikes||0).toLocaleString('fr');
+  document.getElementById('kpi-treat').textContent = Number(summary.stations_to_treat||0).toLocaleString('fr');
+  document.getElementById('kpi-ebike').textContent = Number(summary.ebike_share_pct||0).toFixed(1) + '%';
+  const sync = summary.last_reported || summary.last_ingested;
+  document.getElementById('kpi-sync').textContent = sync ? new Date(sync).toLocaleString('fr') : '—';
+
+  Plotly.react('chartFleet', [{
+    type:'pie', hole:.55,
+    labels:['Mécanique','VAE','Places libres'],
+    values:[fleet.mechanical||0, fleet.ebike||0, fleet.free_slots||0],
+    marker:{ colors:['#00d4aa','#4dabf7','#ffd93d'] },
+    textinfo:'label+percent', hovertemplate:'%{label}: %{value}<extra></extra>',
+  }], { ...PLOTLY_LAYOUT, showlegend:true, legend:{orientation:'h',y:-0.1} }, PLOTLY_CONFIG);
+
+  Plotly.react('chartNetwork', [{
+    type:'bar', orientation:'h',
+    y:['OK','Vide','Pleine','Hors service'],
+    x:[summary.stations_ok, summary.stations_empty, summary.stations_full, summary.stations_closed],
+    marker:{ color:['#00d4aa','#ffd93d','#ff6b6b','#888'] },
+    text:[summary.stations_ok, summary.stations_empty, summary.stations_full, summary.stations_closed],
+    textposition:'outside',
+    hovertemplate:'%{y}: %{x} stations<extra></extra>',
+  }], { ...PLOTLY_LAYOUT, margin:{t:10,b:40,l:110,r:40}, xaxis:{gridcolor:'rgba(255,255,255,.05)'} }, PLOTLY_CONFIG);
+}
+
+async function loadPriority() {
+  const d = await fetchJSON('/analytics/priority-stations?limit=20');
+  const items = d.items || [];
+  const tbody = document.getElementById('bodyPriority');
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-success">Aucune action urgente — réseau stable ✓</td></tr>';
     markersLayer.clearLayers();
+    return;
+  }
+  tbody.innerHTML = items.map(i => {
+    const st = statusLabel(i.status);
+    const actionCls = i.action_label === 'REAPPRO' ? 'badge-warn' : i.action_label === 'VIDER' ? 'badge-ok' : 'badge-crit';
+    return `<tr>
+      <td><strong>${i.station_name}</strong></td>
+      <td><span class="badge ${st.cls} rounded-pill">${st.text}</span></td>
+      <td>${i.bikes_available}</td>
+      <td>${i.bikes_ebike ?? 0}</td>
+      <td><span class="badge ${actionCls} rounded-pill">${i.action_text}</span></td>
+    </tr>`;
+  }).join('');
 
-    (geo.items || []).forEach(s => {
-      const lat = Number(s.lat_zone || s.latitude);
-      const lon = Number(s.lon_zone || s.longitude);
-      if (!lat || !lon) return;
-      const color = colorForStation(Number(s.avg_bikes), s.nb_critiques > 0);
-      const r = Math.max(6, Math.min(16, Number(s.nb_stations || 1) * 2));
-      L.circleMarker([lat, lon], {
-        radius: r, color, fillColor: color,
-        fillOpacity: 0.75, weight: 1.5
-      }).bindPopup(`
-        <b>${s.city || 'Ville inconnue'}</b><br>
-        Stations : ${s.nb_stations}<br>
-        Vélos moy. : ${s.avg_bikes}<br>
-        Utilisation : ${s.avg_utilization}%<br>
-        <span style="color:#ff6b6b">Critiques : ${s.nb_critiques}</span>
-      `).addTo(markersLayer);
-    });
-
-    (crit.items || []).forEach(s => {
-      const lat = Number(s.latitude);
-      const lon = Number(s.longitude);
-      if (!lat || !lon) return;
-      L.circleMarker([lat, lon], {
-        radius: 8, color: '#ff6b6b', fillColor: '#ff6b6b',
-        fillOpacity: 0.9, weight: 2
-      }).bindPopup(`
-        <b style="color:#ff6b6b">⚠ CRITIQUE</b><br>
-        ${s.station_name}<br>
-        Vélos : ${s.bikes_available} | Places : ${s.free_slots}<br>
-        Statut : ${s.status}
-      `).addTo(markersLayer);
-    });
-  } catch(e) { console.warn('Map error', e); }
+  markersLayer.clearLayers();
+  items.forEach(i => {
+    const lat = Number(i.latitude), lon = Number(i.longitude);
+    if (!lat || !lon) return;
+    const color = mapColor(i.status);
+    L.circleMarker([lat, lon], { radius:7, color, fillColor:color, fillOpacity:.85, weight:1.5 })
+      .bindPopup(`<b>${i.station_name}</b><br>${i.action_text}<br>Vélos: ${i.bikes_available} · VAE: ${i.bikes_ebike ?? 0}`)
+      .addTo(markersLayer);
+  });
 }
 
-/* ══════════════════ Q2 — ZONES INSUFFISANTES ══════════════════ */
-async function loadInsufficient() {
-  try {
-    const d = await fetchJSON('/analytics/insufficient-supply');
-    const tbody = document.getElementById('bodyInsufficient');
-    const items = d.items || [];
-    if (!items.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="text-center text-success">Aucune zone insuffisante actuellement ✓</td></tr>';
-      return;
-    }
-    tbody.innerHTML = items.map(i => `
-      <tr>
-        <td><strong>${i.city || '—'}</strong></td>
-        <td>${i.nb_stations}</td>
-        <td>
-          <div class="util-bar"><div class="util-fill" style="width:${Math.min(100,Number(i.avg_bikes)*10)}%;background:#ffd93d"></div></div>
-          ${i.avg_bikes}
-        </td>
-        <td>${i.avg_utilization}%</td>
-        <td>${Number(i.nb_critiques) > 0
-          ? `<span class="badge badge-critical rounded-pill">${i.nb_critiques}</span>`
-          : '<span class="badge badge-ok rounded-pill">0</span>'}</td>
-      </tr>`).join('');
-  } catch(e) { console.warn('Insufficient error', e); }
+async function loadHourly() {
+  const d = await fetchJSON('/analytics/hourly-peak');
+  const items = d.items || [];
+  Plotly.react('chartHourly', [{
+    type:'scatter', mode:'lines+markers', name:'Demande (utilisation %)',
+    x: items.map(i => i.hour_of_day + 'h'),
+    y: items.map(i => i.avg_utilization),
+    line:{ color:'#00d4aa', width:2.5 },
+    fill:'tozeroy', fillcolor:'rgba(0,212,170,.08)',
+    hovertemplate:'%{x} → %{y}%<extra></extra>',
+  }], {
+    ...PLOTLY_LAYOUT,
+    margin:{t:10,b:45,l:50,r:20},
+    xaxis:{ ...PLOTLY_LAYOUT.xaxis, title:'Heure' },
+    yaxis:{ ...PLOTLY_LAYOUT.yaxis, title:'% utilisation' },
+  }, PLOTLY_CONFIG);
 }
 
-/* ══════════════════ Q5 — RÉÉQUILIBRAGE ══════════════════ */
-async function loadRebalancing() {
-  try {
-    const d = await fetchJSON('/analytics/rebalancing?limit=20');
-    const tbody = document.getElementById('bodyRebalancing');
-    const items = d.items || [];
-    if (!items.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-success">Aucune station nécessitant un rééquilibrage ✓</td></tr>';
-      return;
-    }
-    tbody.innerHTML = items.map(i => {
-      const pct = Number(i.critical_pct || 0);
-      const bar = `<div class="util-bar mt-1"><div class="util-fill" style="width:${pct}%;background:${pct>70?'#ff6b6b':pct>40?'#ffd93d':'#00d4aa'}"></div></div>`;
-      return `
-      <tr>
-        <td><strong>${i.station_name}</strong></td>
-        <td>${i.city || '—'}</td>
-        <td>${i.avg_bikes}</td>
-        <td>${bar} ${pct}%</td>
-        <td><span class="badge badge-empty rounded-pill">${i.nb_vides}</span></td>
-        <td><span class="badge badge-ok rounded-pill">${i.nb_pleines}</span></td>
-      </tr>`;
-    }).join('');
-  } catch(e) { console.warn('Rebalancing error', e); }
-}
-
-/* ══════════════════ ALERTES CRITIQUES ══════════════════ */
 async function loadCritical() {
-  try {
-    const d = await fetchJSON('/analytics/critical-stations');
-    const items = d.items || [];
-    document.getElementById('criticalCount').textContent = items.length;
-    const tbody = document.getElementById('bodyCritical');
-    if (!items.length) {
-      tbody.innerHTML = '<tr><td colspan="7" class="text-center text-success"><i class="bi bi-check-circle me-2"></i>Aucune station critique en ce moment</td></tr>';
-      return;
-    }
-    tbody.innerHTML = items.map(i => {
-      const statusBadge = i.status === 'empty'
-        ? `<span class="badge badge-empty rounded-pill">Vide</span>`
-        : i.status === 'full'
-          ? `<span class="badge badge-ok rounded-pill">Pleine</span>`
-          : `<span class="badge badge-critical rounded-pill">${i.status}</span>`;
-      const time = i.ingested_at ? new Date(i.ingested_at).toLocaleTimeString('fr') : '—';
-      return `
-      <tr>
-        <td><strong>${i.station_name}</strong></td>
-        <td>${i.city || '—'}</td>
-        <td>${i.network_name || '—'}</td>
-        <td><span class="${i.bikes_available < 2 ? 'text-danger' : 'text-success'} fw-bold">${i.bikes_available}</span></td>
-        <td>${i.free_slots}</td>
-        <td>${statusBadge}</td>
-        <td class="text-secondary">${time}</td>
-      </tr>`;
-    }).join('');
-  } catch(e) { console.warn('Critical error', e); }
+  const d = await fetchJSON('/analytics/critical-stations');
+  const items = d.items || [];
+  document.getElementById('criticalCount').textContent = items.length;
+  const tbody = document.getElementById('bodyCritical');
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-success">Aucune alerte en ce moment ✓</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(i => {
+    const st = statusLabel(i.status);
+    const time = i.ingested_at ? new Date(i.ingested_at).toLocaleTimeString('fr') : '—';
+    return `<tr>
+      <td><strong>${i.station_name}</strong></td>
+      <td>${i.city||'Paris'}</td>
+      <td class="${i.bikes_available<2?'text-danger':'text-success'} fw-bold">${i.bikes_available}</td>
+      <td>${i.free_slots}</td>
+      <td><span class="badge ${st.cls} rounded-pill">${st.text}</span></td>
+      <td class="text-secondary">${time}</td>
+    </tr>`;
+  }).join('');
 }
 
-/* ══════════════════ ORCHESTRATION ══════════════════ */
 async function loadAll() {
   document.getElementById('lastUpdate').textContent = 'Actualisation…';
-  await Promise.all([
-    loadKPIs(),
-    loadTopStations(),
-    loadHourlyPeak(),
-    loadMap(),
-    loadInsufficient(),
-    loadRebalancing(),
-    loadCritical(),
-  ]);
-  document.getElementById('lastUpdate').textContent =
-    'Mis à jour : ' + new Date().toLocaleTimeString('fr');
+  try {
+    await Promise.all([loadExecutive(), loadPriority(), loadHourly(), loadCritical()]);
+  } catch(e) { console.warn(e); }
+  document.getElementById('lastUpdate').textContent = 'Mis à jour : ' + new Date().toLocaleTimeString('fr');
 }
 
-/* ══════════════════ COUNTDOWN ══════════════════ */
 let countdown = REFRESH_S;
 setInterval(() => {
   countdown--;
@@ -566,7 +327,6 @@ setInterval(() => {
   document.getElementById('countdown').textContent = countdown;
 }, 1000);
 
-/* ══════════════════ INIT ══════════════════ */
 loadAll();
 </script>
 </body>

@@ -132,3 +132,147 @@ def get_network_overview() -> list[dict]:
             ORDER BY n.city
         """))
         return [dict(r._mapping) for r in rows]
+
+
+_LATEST_SNAPSHOTS_CTE = """
+    WITH latest AS (
+        SELECT DISTINCT ON (ss.station_id)
+            ss.station_id, ss.station_name, ss.network_id,
+            ss.latitude, ss.longitude,
+            ss.bikes_available, ss.free_slots, ss.total_capacity,
+            ss.bikes_mechanical, ss.bikes_ebike,
+            ss.status, ss.is_critical,
+            ss.is_installed, ss.is_renting, ss.is_returning,
+            ss.last_reported, ss.ingested_at
+        FROM station_snapshots ss
+        WHERE ss.ingested_at >= NOW() - INTERVAL '30 minutes'
+          AND ss.network_id = 'velib-paris'
+        ORDER BY ss.station_id, ss.ingested_at DESC
+    )
+"""
+
+
+def get_executive_summary() -> dict:
+    """Résumé exécutif — score service, flotte, stations à traiter, fraîcheur."""
+    with engine.connect() as conn:
+        row = conn.execute(text(f"""
+            {_LATEST_SNAPSHOTS_CTE}
+            SELECT
+                COUNT(*)                                              AS total_stations,
+                COUNT(*) FILTER (WHERE status = 'ok')                 AS stations_ok,
+                COUNT(*) FILTER (WHERE status = 'empty')              AS stations_empty,
+                COUNT(*) FILTER (WHERE status = 'full')               AS stations_full,
+                COUNT(*) FILTER (WHERE status = 'closed')             AS stations_closed,
+                SUM(bikes_available)                                  AS total_bikes,
+                SUM(total_capacity)                                   AS total_capacity,
+                SUM(bikes_mechanical)                                 AS total_mechanical,
+                SUM(bikes_ebike)                                      AS total_ebike,
+                MAX(last_reported)                                    AS last_reported,
+                MAX(ingested_at)                                      AS last_ingested
+            FROM latest
+        """)).fetchone()
+
+    if not row or not row.total_stations:
+        return {
+            "total_stations": 0,
+            "service_score_pct": 0.0,
+            "stations_to_treat": 0,
+            "stations_ok": 0,
+            "stations_empty": 0,
+            "stations_full": 0,
+            "stations_closed": 0,
+            "total_bikes": 0,
+            "total_capacity": 0,
+            "fleet_availability_pct": 0.0,
+            "ebike_share_pct": 0.0,
+            "last_reported": None,
+            "last_ingested": None,
+        }
+
+    total = int(row.total_stations)
+    ok = int(row.stations_ok or 0)
+    empty = int(row.stations_empty or 0)
+    full = int(row.stations_full or 0)
+    closed = int(row.stations_closed or 0)
+    bikes = int(row.total_bikes or 0)
+    capacity = int(row.total_capacity or 0)
+    mech = int(row.total_mechanical or 0)
+    ebike = int(row.total_ebike or 0)
+    fleet_total = mech + ebike
+
+    return {
+        "total_stations": total,
+        "service_score_pct": round(ok / total * 100, 1) if total else 0.0,
+        "stations_to_treat": empty + full + closed,
+        "stations_ok": ok,
+        "stations_empty": empty,
+        "stations_full": full,
+        "stations_closed": closed,
+        "total_bikes": bikes,
+        "total_capacity": capacity,
+        "fleet_availability_pct": round(bikes / capacity * 100, 1) if capacity else 0.0,
+        "ebike_share_pct": round(ebike / fleet_total * 100, 1) if fleet_total else 0.0,
+        "last_reported": row.last_reported.isoformat() if row.last_reported else None,
+        "last_ingested": row.last_ingested.isoformat() if row.last_ingested else None,
+    }
+
+
+def get_fleet_mix() -> dict:
+    """Totaux mécanique / VAE et part VAE dans la flotte disponible."""
+    with engine.connect() as conn:
+        row = conn.execute(text(f"""
+            {_LATEST_SNAPSHOTS_CTE}
+            SELECT
+                SUM(bikes_mechanical) AS mechanical,
+                SUM(bikes_ebike)      AS ebike,
+                SUM(free_slots)       AS free_slots,
+                SUM(bikes_available)  AS bikes_available
+            FROM latest
+        """)).fetchone()
+
+    mech = int(row.mechanical or 0) if row else 0
+    ebike = int(row.ebike or 0) if row else 0
+    fleet = mech + ebike
+    return {
+        "mechanical": mech,
+        "ebike": ebike,
+        "free_slots": int(row.free_slots or 0) if row else 0,
+        "bikes_available": int(row.bikes_available or 0) if row else 0,
+        "ebike_share_pct": round(ebike / fleet * 100, 1) if fleet else 0.0,
+    }
+
+
+def get_priority_stations(limit: int = 15) -> list[dict]:
+    """Stations urgentes avec action opérationnelle recommandée."""
+    with engine.connect() as conn:
+        rows = conn.execute(text(f"""
+            {_LATEST_SNAPSHOTS_CTE}
+            SELECT
+                station_name,
+                latitude,
+                longitude,
+                status,
+                bikes_available,
+                bikes_ebike,
+                free_slots,
+                CASE status
+                    WHEN 'empty'   THEN 'REAPPRO'
+                    WHEN 'full'    THEN 'VIDER'
+                    WHEN 'closed'  THEN 'VERIFIER'
+                    ELSE 'SURVEILLER'
+                END AS action_label,
+                CASE status
+                    WHEN 'empty'   THEN 'Réapprovisionner'
+                    WHEN 'full'    THEN 'Vider'
+                    WHEN 'closed'  THEN 'Vérifier'
+                    ELSE 'Surveiller'
+                END AS action_text
+            FROM latest
+            WHERE status IN ('empty', 'full', 'closed')
+            ORDER BY
+                CASE status WHEN 'empty' THEN 1 WHEN 'full' THEN 2 ELSE 3 END,
+                bikes_available ASC,
+                free_slots DESC
+            LIMIT :limit
+        """), {"limit": limit})
+        return [dict(r._mapping) for r in rows]

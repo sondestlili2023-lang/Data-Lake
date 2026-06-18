@@ -1,112 +1,105 @@
 import logging
-import threading
-import time
-from contextlib import asynccontextmanager
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
+from app.alert_recipients import (
+    add_recipient,
+    delete_recipient,
+    is_sender_phone,
+    list_dispatch_recipients,
+    list_recipients,
+    sync_openclaw_allowlist,
+)
+from app.alert_snooze import is_contact_snoozed, list_active_snoozes, snooze_contact
 from app.analytics import (
     get_critical_stations,
+    get_executive_summary,
+    get_fleet_mix,
     get_geographic_balance,
     get_hourly_peak,
     get_insufficient_supply_zones,
     get_network_overview,
+    get_priority_stations,
     get_rebalancing_stations,
     get_top_stations,
 )
+from app.config import ALERTS_ADMIN_TOKEN, OPENCLAW_WHATSAPP_SENDER, TELEGRAM_CHAT_ID
 from app.ingest import run_ingestion_once
-from app.telegram_bot import (
-    build_critical_alert_message,
-    send_critical_alert,
-    send_hourly_summary,
-    send_saturation_alert,
-    send_message,
-    start_polling,
+from app.kpi_health import (
+    evaluate_kpi_health,
+    format_alert_message,
+    format_dg_plain_message,
 )
+from app.telegram_bot import build_critical_alert_message, send_message
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
-logger = logging.getLogger(__name__)
-
-
-INGEST_INTERVAL  = 300   # 5 min — respecte le rate limit CityBikes
-ALERT_INTERVAL   = 300
-HOURLY_INTERVAL  = 3600
-
-
-def _scheduler_loop() -> None:
-    last_ingest      = 0.0
-    last_alert_check = 0.0
-    last_hourly      = 0.0
-
-    while True:
-        now = time.time()
-
-        if now - last_ingest >= INGEST_INTERVAL:
-            try:
-                result = run_ingestion_once()
-                logger.info("Ingestion OK — %d enregistrements", result.get("records_inserted", 0))
-            except Exception:
-                logger.exception("Erreur d'ingestion")
-            last_ingest = now
-
-        if now - last_alert_check >= ALERT_INTERVAL:
-            try:
-                send_critical_alert()
-                send_saturation_alert()
-            except Exception:
-                logger.exception("Erreur envoi alerte")
-            last_alert_check = now
-
-        if datetime.now().minute == 0 and now - last_hourly >= HOURLY_INTERVAL:
-            try:
-                send_hourly_summary()
-            except Exception:
-                logger.exception("Erreur résumé horaire")
-            last_hourly = now
-
-        time.sleep(30)
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    threading.Thread(target=_scheduler_loop, daemon=True, name="scheduler").start()
-    start_polling()
-    yield
-
 
 _STATIC = Path(__file__).parent / "static"
 
-app = FastAPI(title="Vélib Data Lakehouse API", lifespan=lifespan)
+app = FastAPI(title="Vélib Data Lakehouse API")
 app.mount("/static", StaticFiles(directory=_STATIC), name="static")
 
 
-# ── Dashboard ─────────────────────────────────────────────────────────────────
+class RecipientCreate(BaseModel):
+    phone: str
+    label: str | None = None
+
+
+class SnoozeCreate(BaseModel):
+    channel: str
+    contact: str
+    hours: float | None = None
+
+
+def _require_admin_token(token: str | None) -> None:
+    if ALERTS_ADMIN_TOKEN and token != ALERTS_ADMIN_TOKEN:
+        raise HTTPException(status_code=403, detail="Token admin invalide")
+
 
 @app.get("/dashboard", include_in_schema=False)
 def dashboard():
     return FileResponse(_STATIC / "dashboard.html")
 
 
-# ── Health ────────────────────────────────────────────────────────────────────
+@app.get("/alerts", include_in_schema=False)
+def alerts_page():
+    return FileResponse(_STATIC / "alerts.html")
+
 
 @app.get("/health")
 def health() -> dict[str, Any]:
     return {"status": "ok"}
 
 
-# ── Ingestion manuelle ────────────────────────────────────────────────────────
-
 @app.post("/ingest")
 def ingest() -> dict[str, Any]:
     return run_ingestion_once()
 
 
-# ── Analytics ─────────────────────────────────────────────────────────────────
+@app.get("/analytics/kpi-status")
+def kpi_status() -> dict[str, Any]:
+    return evaluate_kpi_health()
+
+
+@app.get("/analytics/executive-summary")
+def executive_summary():
+    return get_executive_summary()
+
+
+@app.get("/analytics/fleet-mix")
+def fleet_mix():
+    return get_fleet_mix()
+
+
+@app.get("/analytics/priority-stations")
+def priority_stations(limit: int = Query(default=15, ge=1, le=50)):
+    return {"items": get_priority_stations(limit)}
+
 
 @app.get("/analytics/top-stations")
 def top_stations(limit: int = Query(default=10, ge=1, le=50)):
@@ -143,24 +136,109 @@ def network_overview():
     return {"items": get_network_overview()}
 
 
-# ── Telegram ──────────────────────────────────────────────────────────────────
+@app.get("/alerts/recipients")
+def alerts_recipients_list(for_dispatch: bool = Query(default=False)):
+    items = list_dispatch_recipients() if for_dispatch else list_recipients(active_only=True)
+    return {
+        "items": items,
+        "count": len(items),
+        "sender_excluded": OPENCLAW_WHATSAPP_SENDER or None,
+    }
+
+
+@app.post("/alerts/recipients")
+def alerts_recipients_add(
+    body: RecipientCreate,
+    x_alerts_token: str | None = Header(None, alias="X-Alerts-Token"),
+):
+    _require_admin_token(x_alerts_token)
+    try:
+        return add_recipient(body.phone, body.label)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.delete("/alerts/recipients/{recipient_id}")
+def alerts_recipients_delete(
+    recipient_id: int,
+    x_alerts_token: str | None = Header(None, alias="X-Alerts-Token"),
+):
+    _require_admin_token(x_alerts_token)
+    return delete_recipient(recipient_id)
+
+
+@app.post("/alerts/sync-openclaw")
+def alerts_sync_openclaw(
+    x_alerts_token: str | None = Header(None, alias="X-Alerts-Token"),
+):
+    _require_admin_token(x_alerts_token)
+    return sync_openclaw_allowlist()
+
+
+@app.get("/alerts/snooze-status")
+def alerts_snooze_status():
+    items = list_active_snoozes()
+    return {"items": items, "count": len(items)}
+
+
+@app.post("/alerts/snooze")
+def alerts_snooze(body: SnoozeCreate):
+    try:
+        return snooze_contact(body.channel, body.contact, body.hours)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/alerts/dispatch")
+def alerts_dispatch():
+    status = evaluate_kpi_health()
+    if status["healthy"]:
+        return {"sent": False, "healthy": True, "status": status}
+
+    msg_html = format_alert_message(status)
+    msg_plain = format_dg_plain_message(status)
+
+    telegram_snoozed = is_contact_snoozed("telegram", TELEGRAM_CHAT_ID)
+    telegram_sent = False
+    if TELEGRAM_CHAT_ID and not telegram_snoozed:
+        telegram_sent = send_message(msg_html)
+
+    wa_recipients = list_dispatch_recipients()
+    wa_snoozed = sum(
+        1 for r in list_recipients(active_only=True)
+        if not is_sender_phone(r["phone_e164"])
+        and is_contact_snoozed("whatsapp", r["phone_e164"])
+    )
+    any_sent = telegram_sent or len(wa_recipients) > 0
+
+    return {
+        "sent": any_sent,
+        "healthy": False,
+        "status": status,
+        "message_html": msg_html,
+        "message": msg_plain,
+        "telegram_sent": telegram_sent,
+        "telegram_snoozed": telegram_snoozed,
+        "whatsapp_recipients": [r["phone_e164"] for r in wa_recipients],
+        "whatsapp_snoozed_count": wa_snoozed,
+        "whatsapp_dispatch_hint": "Exécutez scripts/dispatch_whatsapp_alerts.ps1 sur le host Windows.",
+    }
+
 
 @app.post("/telegram/alert")
 def telegram_alert(station_name: str, bikes_available: int, free_slots: int):
-    msg  = build_critical_alert_message(station_name, bikes_available, free_slots)
+    msg = build_critical_alert_message(station_name, bikes_available, free_slots)
     sent = send_message(msg)
     return {"sent": sent, "message": msg}
 
 
-@app.post("/telegram/critical-check")
-def telegram_critical_check():
-    """Déclenche manuellement la vérification d'alertes critiques."""
-    send_critical_alert()
-    return {"triggered": True}
-
-
-@app.post("/telegram/hourly-summary")
-def telegram_hourly():
-    """Déclenche manuellement le résumé horaire."""
-    send_hourly_summary()
-    return {"triggered": True}
+@app.post("/telegram/kpi-alert-check")
+def telegram_kpi_alert_check():
+    status = evaluate_kpi_health()
+    if status["healthy"]:
+        return {"sent": False, "healthy": True, "status": status}
+    if is_contact_snoozed("telegram", TELEGRAM_CHAT_ID):
+        return {"sent": False, "healthy": False, "snoozed": True, "status": status}
+    msg = format_alert_message(status)
+    sent = send_message(msg)
+    return {"sent": sent, "healthy": False, "status": status, "message": msg}

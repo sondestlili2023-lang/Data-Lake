@@ -63,11 +63,29 @@ services:
       db:
         condition: service_healthy
 
+  db-schema-init:
+    image: postgres:16-alpine
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: velib123
+    volumes:
+      - ./schema:/schema:ro
+    entrypoint: >
+      /bin/sh -c "
+      psql -h db -U velib -d velib -f /schema/migrate_executive.sql;
+      echo 'Executive migration applied';
+      "
+    restart: "no"
+
   api:
     build: .
     depends_on:
       db:
         condition: service_healthy
+      db-schema-init:
+        condition: service_completed_successfully
       minio:
         condition: service_healthy
       minio-setup:
@@ -78,8 +96,21 @@ services:
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
       CITYBIKES_API_URL: https://api.citybik.es/v2
+      INGEST_SCOPE: ${INGEST_SCOPE:-paris}
+      VELIB_GBFS_BASE: ${VELIB_GBFS_BASE:-https://velib-metropole-opendata.smovengo.cloud/opendata/Velib_Metropole}
+      JCDECAUX_API_URL: https://api.jcdecaux.com/vls/v1
+      JCDECAUX_API_KEY: ${JCDECAUX_API_KEY:-}
+      JCDECAUX_CONTRACTS: ${JCDECAUX_CONTRACTS:-}
+      ENABLE_JCDECAUX: ${ENABLE_JCDECAUX:-false}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      OPENCLAW_CONFIG_PATH: ${OPENCLAW_CONFIG_PATH:-/openclaw-config/openclaw.json}
+      OPENCLAW_AUTO_RESTART: ${OPENCLAW_AUTO_RESTART:-true}
+      OPENCLAW_WHATSAPP_SENDER: ${OPENCLAW_WHATSAPP_SENDER:-+33781744135}
+      ALERT_SNOOZE_HOURS: ${ALERT_SNOOZE_HOURS:-6}
+      ALERTS_ADMIN_TOKEN: ${ALERTS_ADMIN_TOKEN:-}
+    volumes:
+      - ${OPENCLAW_CONFIG_DIR:-C:/Users/secre/.openclaw}:/openclaw-config:rw
     ports:
       - "8000:8000"
     restart: unless-stopped

@@ -57,7 +57,6 @@ def build_critical_alert_message(station_name: str, bikes_available: int, free_s
         f"Places libres : {free_slots}"
     )
 
-
 # ── Long-polling ──────────────────────────────────────────────────────────────
 
 def _get_updates(offset: int) -> list[dict]:
@@ -428,3 +427,4 @@ def send_hourly_summary() -> None:
         send_message("\n".join(lines))
     except Exception:
         logger.exception("send_hourly_summary error")
+

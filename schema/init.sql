@@ -36,9 +36,31 @@ CREATE TABLE IF NOT EXISTS station_snapshots (
     total_capacity   INT            DEFAULT 0,
     utilization_rate NUMERIC(5,2)   DEFAULT 0,
     is_critical      BOOLEAN        DEFAULT FALSE,
-    status           TEXT           DEFAULT 'ok',   -- 'empty' | 'full' | 'ok'
+    status           TEXT           DEFAULT 'ok',   -- 'empty' | 'full' | 'ok' | 'closed'
+    bikes_mechanical INT            DEFAULT 0,
+    bikes_ebike      INT            DEFAULT 0,
+    is_installed     BOOLEAN        DEFAULT TRUE,
+    is_renting       BOOLEAN        DEFAULT TRUE,
+    is_returning     BOOLEAN        DEFAULT TRUE,
+    last_reported    TIMESTAMP,
     timestamp        TIMESTAMP      NOT NULL,
     ingested_at      TIMESTAMP      DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS alert_recipients (
+    id         SERIAL PRIMARY KEY,
+    phone_e164 TEXT NOT NULL UNIQUE,
+    label      TEXT,
+    channel    TEXT DEFAULT 'whatsapp',
+    active     BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS alert_snooze (
+    contact_key  TEXT PRIMARY KEY,
+    channel      TEXT NOT NULL,
+    paused_until TIMESTAMP NOT NULL,
+    paused_at    TIMESTAMP DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_ss_ingested     ON station_snapshots (ingested_at DESC);
@@ -64,6 +86,12 @@ SELECT
     ss.utilization_rate,
     ss.is_critical,
     ss.status,
+    ss.bikes_mechanical,
+    ss.bikes_ebike,
+    ss.is_installed,
+    ss.is_renting,
+    ss.is_returning,
+    ss.last_reported,
     ss.timestamp,
     ss.ingested_at
 FROM station_snapshots ss
